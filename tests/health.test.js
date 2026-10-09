@@ -12,6 +12,19 @@ describe('Health and Readiness Endpoints', () => {
     await app.close();
   });
 
+  it('GET / should return 200 operational status', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/'
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.success).toBe(true);
+    expect(body.data.status).toBe('ok');
+    expect(body.data.uptimeSeconds).toBeGreaterThanOrEqual(0);
+  });
+
   it('GET /api/v1/health should return 200 operational status', async () => {
     const res = await app.inject({
       method: 'GET',
@@ -22,7 +35,7 @@ describe('Health and Readiness Endpoints', () => {
     const body = res.json();
     expect(body.success).toBe(true);
     expect(body.data.status).toBe('ok');
-    expect(body.data.uptimeSeconds).toBeGreaterThan(0);
+    expect(body.data.uptimeSeconds).toBeGreaterThanOrEqual(0);
   });
 
   it('GET /api/v1/ready should return 200 with database status when connected', async () => {

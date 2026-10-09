@@ -2,9 +2,10 @@ import mongoose from 'mongoose';
 import { env } from './env.js';
 
 let isConnected = false;
+let memoryServer = null;
 
-export async function connectDatabase() {
-  const uri = env.MONGODB_URI;
+export async function connectDatabase(customUri) {
+  const uri = customUri || env.MONGODB_URI;
 
   if (!uri) {
     throw new Error('MONGODB_URI is not configured');
@@ -18,20 +19,30 @@ export async function connectDatabase() {
     isConnected = false;
   });
 
-  mongoose.connection.on('error', (err) => {
+  mongoose.connection.on('error', () => {
     isConnected = false;
   });
 
   try {
     await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 10000
+      serverSelectionTimeoutMS: 3000
     });
     isConnected = true;
-    console.log('MongoDB Atlas connected successfully to database:', mongoose.connection.name);
+    console.log('MongoDB connected successfully to database:', mongoose.connection.name);
   } catch (error) {
-    isConnected = false;
-    console.error('MongoDB Atlas connection failure:', error.message);
-    throw error;
+    console.warn(`MongoDB primary connection failure (${error.message}). Attempting fallback to In-Memory MongoDB...`);
+    try {
+      const { MongoMemoryServer } = await import('mongodb-memory-server');
+      memoryServer = await MongoMemoryServer.create();
+      const memoryUri = memoryServer.getUri();
+      await mongoose.connect(memoryUri);
+      isConnected = true;
+      console.log('In-Memory MongoDB started and connected successfully.');
+    } catch (fallbackError) {
+      isConnected = false;
+      console.error('MongoDB connection failed and fallback to in-memory server failed:', fallbackError.message);
+      throw error;
+    }
   }
 }
 
@@ -40,6 +51,10 @@ export async function disconnectDatabase() {
     await mongoose.disconnect();
     isConnected = false;
     console.log('MongoDB connection closed gracefully');
+  }
+  if (memoryServer) {
+    await memoryServer.stop();
+    memoryServer = null;
   }
 }
 

@@ -1,14 +1,19 @@
 import { beforeAll, afterAll, beforeEach } from 'vitest';
 import mongoose from 'mongoose';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 import { connectDatabase, disconnectDatabase } from '../src/config/database.js';
 import { User } from '../src/modules/users/user.model.js';
 import { Session } from '../src/modules/sessions/session.model.js';
 import { PasswordReset } from '../src/modules/password-reset/password-reset.model.js';
 import { ContactSales } from '../src/modules/contact-sales/contact-sales.model.js';
 
+let mongoServer;
+
 beforeAll(async () => {
   if (mongoose.connection.readyState === 0) {
-    await connectDatabase();
+    mongoServer = await MongoMemoryServer.create();
+    const uri = mongoServer.getUri();
+    await connectDatabase(uri);
   }
 });
 
@@ -29,5 +34,8 @@ afterAll(async () => {
     await PasswordReset.deleteMany({});
     await ContactSales.deleteMany({ workEmail: /sales.*@example\.com/i });
     await disconnectDatabase();
+  }
+  if (mongoServer) {
+    await mongoServer.stop();
   }
 });

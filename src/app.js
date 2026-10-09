@@ -7,13 +7,12 @@ import jwtPlugin from './plugins/jwt.js';
 import rateLimitPlugin from './plugins/rate-limit.js';
 import swaggerPlugin from './plugins/swagger.js';
 
+import { healthRoutes } from './modules/health/health.routes.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { userRoutes } from './modules/users/user.routes.js';
 import { contactSalesRoutes } from './modules/contact-sales/contact-sales.routes.js';
 
 import { errorHandler } from './middleware/error-handler.js';
-import { getDatabaseStatus } from './config/database.js';
-import { ApiResponse } from './utils/api-response.js';
 
 export async function buildApp(opts = {}) {
   const fastify = Fastify({
@@ -39,37 +38,13 @@ export async function buildApp(opts = {}) {
   await fastify.register(rateLimitPlugin);
   await fastify.register(swaggerPlugin);
 
-  // Health and Readiness Endpoints
-  fastify.get('/api/v1/health', { schema: { tags: ['Health'] } }, async (request, reply) => {
-    return ApiResponse.success(reply, 200, 'IntellMeet backend service operational', {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptimeSeconds: process.uptime()
-    });
-  });
-
-  fastify.get('/api/v1/ready', { schema: { tags: ['Health'] } }, async (request, reply) => {
-    const dbStatus = getDatabaseStatus();
-
-    if (!dbStatus.isConnected) {
-      return ApiResponse.error(
-        reply,
-        503,
-        'Database connection unavailable',
-        'DATABASE_UNAVAILABLE',
-        dbStatus
-      );
-    }
-
-    return ApiResponse.success(reply, 200, 'System ready and connected to database', {
-      status: 'ready',
-      database: dbStatus
-    });
-  });
+  // Root Health and Readiness Endpoints
+  await fastify.register(healthRoutes);
 
   // Register Feature Route Modules under /api/v1
   await fastify.register(
     async (api) => {
+      await api.register(healthRoutes);
       await api.register(authRoutes);
       await api.register(userRoutes);
       await api.register(contactSalesRoutes);

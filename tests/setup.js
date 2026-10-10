@@ -6,6 +6,9 @@ import { User } from '../src/modules/users/user.model.js';
 import { Session } from '../src/modules/sessions/session.model.js';
 import { PasswordReset } from '../src/modules/password-reset/password-reset.model.js';
 import { ContactSales } from '../src/modules/contact-sales/contact-sales.model.js';
+import { Conversation } from '../src/modules/chat/conversation.model.js';
+import { ChatMessage } from '../src/modules/chat/message.model.js';
+import { MessageReceipt } from '../src/modules/chat/receipt.model.js';
 
 let mongoServer;
 
@@ -20,19 +23,25 @@ beforeAll(async () => {
 beforeEach(async () => {
   // Clear collections between test runs to ensure isolation
   if (mongoose.connection.readyState === 1) {
-    await User.deleteMany({ email: /test.*@example\.com|sales.*@example\.com|forgot.*@example\.com|reset.*@example\.com|disabled.*@example\.com/i });
+    await User.deleteMany({ email: /test.*@example\.com|sales.*@example\.com|forgot.*@example\.com|reset.*@example\.com|disabled.*@example\.com|chat.*@example\.com|socket.*@example\.com/i });
     await Session.deleteMany({});
     await PasswordReset.deleteMany({});
     await ContactSales.deleteMany({ workEmail: /sales.*@example\.com/i });
+    await Conversation.deleteMany({});
+    await ChatMessage.deleteMany({});
+    await MessageReceipt.deleteMany({});
   }
 });
 
 afterAll(async () => {
   if (mongoose.connection.readyState === 1) {
-    await User.deleteMany({ email: /test.*@example\.com|sales.*@example\.com|forgot.*@example\.com|reset.*@example\.com|disabled.*@example\.com/i });
+    await User.deleteMany({ email: /test.*@example\.com|sales.*@example\.com|forgot.*@example\.com|reset.*@example\.com|disabled.*@example\.com|chat.*@example\.com|socket.*@example\.com/i });
     await Session.deleteMany({});
     await PasswordReset.deleteMany({});
     await ContactSales.deleteMany({ workEmail: /sales.*@example\.com/i });
+    await Conversation.deleteMany({});
+    await ChatMessage.deleteMany({});
+    await MessageReceipt.deleteMany({});
     await disconnectDatabase();
   }
   if (mongoServer) {

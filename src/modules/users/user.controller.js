@@ -23,4 +23,10 @@ export class UserController {
 
     return ApiResponse.success(reply, 200, 'User profile updated successfully', { user });
   }
+
+  static async getAllUsers(request, reply) {
+    const { page, limit, k, search, q } = request.query;
+    const result = await UserService.getAllUsers({ page, limit, k, search, q });
+    return ApiResponse.success(reply, 200, 'Users retrieved successfully', result);
+  }
 }

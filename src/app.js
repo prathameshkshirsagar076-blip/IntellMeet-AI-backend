@@ -11,7 +11,9 @@ import { healthRoutes } from './modules/health/health.routes.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { userRoutes } from './modules/users/user.routes.js';
 import { contactSalesRoutes } from './modules/contact-sales/contact-sales.routes.js';
+import { chatRoutes } from './modules/chat/chat.routes.js';
 
+import { initChatSocket, closeChatSocket } from './modules/chat/socket/socket.server.js';
 import { errorHandler } from './middleware/error-handler.js';
 
 export async function buildApp(opts = {}) {
@@ -38,6 +40,13 @@ export async function buildApp(opts = {}) {
   await fastify.register(rateLimitPlugin);
   await fastify.register(swaggerPlugin);
 
+  // Initialize Real-time Socket.IO Server attached to Fastify's HTTP server
+  const io = initChatSocket(fastify.server);
+  fastify.decorate('io', io);
+  fastify.addHook('onClose', async () => {
+    await closeChatSocket();
+  });
+
   // Root Health and Readiness Endpoints
   await fastify.register(healthRoutes);
 
@@ -48,6 +57,7 @@ export async function buildApp(opts = {}) {
       await api.register(authRoutes);
       await api.register(userRoutes);
       await api.register(contactSalesRoutes);
+      await api.register(chatRoutes);
     },
     { prefix: '/api/v1' }
   );

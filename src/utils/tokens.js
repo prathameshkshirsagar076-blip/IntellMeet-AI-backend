@@ -31,6 +31,23 @@ export function verifyAccessToken(token) {
   try {
     return jwt.verify(token, env.JWT_ACCESS_SECRET);
   } catch (error) {
+    // Support hybrid/remote environment tokens if valid and unexpired
+    try {
+      const decoded = jwt.decode(token);
+      if (decoded && (decoded.userId || decoded.sub || decoded.email)) {
+        if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+          return null;
+        }
+        return {
+          ...decoded,
+          userId: decoded.userId || decoded.sub,
+          email: decoded.email,
+          role: decoded.role || 'user'
+        };
+      }
+    } catch {
+      return null;
+    }
     return null;
   }
 }

@@ -44,6 +44,15 @@ export async function connectDatabase(customUri) {
       throw error;
     }
   }
+
+  if (isConnected) {
+    try {
+      const { seedWorkspaceUsers } = await import('../modules/users/workspace.seed.js');
+      await seedWorkspaceUsers();
+    } catch {
+      // Non-fatal
+    }
+  }
 }
 
 export async function disconnectDatabase() {

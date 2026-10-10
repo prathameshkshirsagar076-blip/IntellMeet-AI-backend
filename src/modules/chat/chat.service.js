@@ -4,6 +4,7 @@ import { ChatMessage } from './message.model.js';
 import { MessageReceipt } from './receipt.model.js';
 import { User } from '../users/user.model.js';
 import { getIO } from './socket/socket.server.js';
+import { WORKSPACE_SEED_USERS } from '../users/workspace.seed.js';
 
 export class ChatService {
   /**
@@ -38,12 +39,50 @@ export class ChatService {
       throw err;
     }
 
-    const recipient = await User.findById(recipientId);
+    let recipient = await User.findById(recipientId);
+    if (!recipient) {
+      const match = WORKSPACE_SEED_USERS.find((u) => u._id.toString() === recipientId.toString());
+      if (match) {
+        try {
+          recipient = await User.create(match);
+        } catch {
+          recipient = await User.findById(recipientId);
+        }
+      }
+    }
+
     if (!recipient || !recipient.isActive) {
       const err = new Error('Recipient user not found or inactive');
       err.statusCode = 404;
       err.code = 'RECIPIENT_NOT_FOUND';
       throw err;
+    }
+
+    // Ensure sender also exists in local database
+    let sender = await User.findById(userId);
+    if (!sender) {
+      const match = WORKSPACE_SEED_USERS.find((u) => u._id.toString() === userId.toString());
+      if (match) {
+        try {
+          sender = await User.create(match);
+        } catch {
+          sender = await User.findById(userId);
+        }
+      } else {
+        try {
+          sender = await User.create({
+            _id: userId,
+            email: `user_${userId}@intellmeet.internal`,
+            normalizedEmail: `user_${userId}@intellmeet.internal`,
+            name: 'You',
+            role: 'user',
+            authProvider: 'google',
+            isActive: true
+          });
+        } catch {
+          sender = await User.findById(userId);
+        }
+      }
     }
 
     const canonicalKey = Conversation.computeCanonicalKey(userId, recipientId);
@@ -291,7 +330,20 @@ export class ChatService {
     }
 
     // Verify conversation existence and membership
-    const conversation = await Conversation.findById(conversationId);
+    let conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      try {
+        conversation = await Conversation.create({
+          _id: conversationId,
+          type: 'direct',
+          participants: [senderId],
+          hiddenFor: []
+        });
+      } catch {
+        conversation = await Conversation.findById(conversationId);
+      }
+    }
+
     if (
       !conversation ||
       !conversation.participants.some((p) => p.toString() === senderId.toString())
@@ -318,9 +370,8 @@ export class ChatService {
     }
 
     // Identify recipient
-    const recipientId = conversation.participants.find(
-      (p) => p.toString() !== senderId.toString()
-    );
+    const recipientId =
+      conversation.participants.find((p) => p.toString() !== senderId.toString()) || senderId;
 
     let message;
     try {

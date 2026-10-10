@@ -29,6 +29,7 @@ export default fp(async function (fastify, opts) {
       tags: [
         { name: 'Auth', description: 'Authentication and Session Management' },
         { name: 'Users', description: 'User Profile Management' },
+        { name: 'Chat', description: 'Real-time Messaging, Conversations, and Receipts' },
         { name: 'Contact Sales', description: 'Enterprise Inquiries' },
         { name: 'Health', description: 'System Health & Readiness Diagnostics' }
       ]

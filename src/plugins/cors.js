@@ -4,7 +4,14 @@ import { env } from '../config/env.js';
 
 export default fp(async function (fastify, opts) {
   fastify.register(fastifyCors, {
-    origin: [env.FRONTEND_URL, 'http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true);
+      const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+      if (isLocalhost || origin === env.FRONTEND_URL) {
+        return cb(null, true);
+      }
+      cb(new Error('Not allowed by CORS'), false);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']

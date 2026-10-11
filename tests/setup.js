@@ -9,6 +9,9 @@ import { ContactSales } from '../src/modules/contact-sales/contact-sales.model.j
 import { Conversation } from '../src/modules/chat/conversation.model.js';
 import { ChatMessage } from '../src/modules/chat/message.model.js';
 import { MessageReceipt } from '../src/modules/chat/receipt.model.js';
+import { Meeting } from '../src/modules/meetings/meeting.model.js';
+import { MeetingParticipant } from '../src/modules/meetings/participant.model.js';
+import { MeetingMessage } from '../src/modules/meetings/meeting-message.model.js';
 
 let mongoServer;
 
@@ -23,25 +26,31 @@ beforeAll(async () => {
 beforeEach(async () => {
   // Clear collections between test runs to ensure isolation
   if (mongoose.connection.readyState === 1) {
-    await User.deleteMany({ email: /test.*@example\.com|sales.*@example\.com|forgot.*@example\.com|reset.*@example\.com|disabled.*@example\.com|chat.*@example\.com|socket.*@example\.com/i });
+    await User.deleteMany({ email: /test.*@example\.com|sales.*@example\.com|forgot.*@example\.com|reset.*@example\.com|disabled.*@example\.com|chat.*@example\.com|socket.*@example\.com|meeting.*@example\.com/i });
     await Session.deleteMany({});
     await PasswordReset.deleteMany({});
     await ContactSales.deleteMany({ workEmail: /sales.*@example\.com/i });
     await Conversation.deleteMany({});
     await ChatMessage.deleteMany({});
     await MessageReceipt.deleteMany({});
+    await Meeting.deleteMany({});
+    await MeetingParticipant.deleteMany({});
+    await MeetingMessage.deleteMany({});
   }
 });
 
 afterAll(async () => {
   if (mongoose.connection.readyState === 1) {
-    await User.deleteMany({ email: /test.*@example\.com|sales.*@example\.com|forgot.*@example\.com|reset.*@example\.com|disabled.*@example\.com|chat.*@example\.com|socket.*@example\.com/i });
+    await User.deleteMany({ email: /test.*@example\.com|sales.*@example\.com|forgot.*@example\.com|reset.*@example\.com|disabled.*@example\.com|chat.*@example\.com|socket.*@example\.com|meeting.*@example\.com/i });
     await Session.deleteMany({});
     await PasswordReset.deleteMany({});
     await ContactSales.deleteMany({ workEmail: /sales.*@example\.com/i });
     await Conversation.deleteMany({});
     await ChatMessage.deleteMany({});
     await MessageReceipt.deleteMany({});
+    await Meeting.deleteMany({});
+    await MeetingParticipant.deleteMany({});
+    await MeetingMessage.deleteMany({});
     await disconnectDatabase();
   }
   if (mongoServer) {

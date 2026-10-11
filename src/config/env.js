@@ -61,5 +61,19 @@ export const env = {
     FROM: process.env.EMAIL_FROM || 'noreply@intellmeet.com'
   },
 
-  PASSWORD_RESET_URL: process.env.PASSWORD_RESET_URL || 'http://localhost:3000/reset-password'
+  PASSWORD_RESET_URL: process.env.PASSWORD_RESET_URL || 'http://localhost:3000/reset-password',
+
+  WEBRTC: {
+    STUN_SERVERS: (process.env.STUN_SERVERS || 'stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302,stun:stun2.l.google.com:19302')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean),
+    TURN_SERVER_URL: process.env.TURN_SERVER_URL || '',
+    TURN_USERNAME: process.env.TURN_USERNAME || '',
+    TURN_CREDENTIAL: process.env.TURN_CREDENTIAL || '',
+    TURN_SECRET: process.env.TURN_SECRET || '',
+    TURN_TTL_SECONDS: parseInt(process.env.TURN_TTL_SECONDS || '86400', 10),
+    MAX_PARTICIPANTS: parseInt(process.env.MAX_MEETING_PARTICIPANTS || '50', 10)
+  }
 };
+

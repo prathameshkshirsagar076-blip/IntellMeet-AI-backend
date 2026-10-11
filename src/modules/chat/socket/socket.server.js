@@ -6,6 +6,7 @@ import { Conversation } from '../conversation.model.js';
 import { ChatService } from '../chat.service.js';
 import { presenceManager } from './presence.manager.js';
 import { env } from '../../../config/env.js';
+import { registerMeetingSocketHandlers } from '../../meetings/socket/meeting-socket.handler.js';
 
 let ioInstance = null;
 
@@ -152,6 +153,9 @@ export function initChatSocket(httpServer, options = {}) {
         timestamp: new Date()
       });
     }
+
+    // 3. Register real-time meeting and WebRTC signaling socket handlers
+    registerMeetingSocketHandlers(io, socket);
 
     /**
      * Event: conversation:join

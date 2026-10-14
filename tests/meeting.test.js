@@ -435,4 +435,125 @@ describe('Meeting REST API Integration Tests', () => {
       expect(response.json().data.isDeleted).toBe(true);
     });
   });
+
+  describe('Schedule Meeting, Invitations & Calendar Sync Tests', () => {
+    it('should reject scheduling a meeting in the past with 400 PAST_START_TIME', async () => {
+      const pastTime = new Date(Date.now() - 3600000).toISOString();
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/meetings',
+        headers: { authorization: `Bearer ${hostToken}` },
+        payload: {
+          title: 'Past Meeting Attempt',
+          scheduledStartAt: pastTime,
+          durationMinutes: 30
+        }
+      });
+
+      expect(response.statusCode).toBe(400);
+      const json = response.json();
+      expect(json.success).toBe(false);
+      expect(json.error.code).toBe('PAST_START_TIME');
+    });
+
+    it('should schedule a valid future meeting with multiple invitees and timezone via /meetings/schedule', async () => {
+      const futureStart = new Date(Date.now() + 86400000); // Tomorrow
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/meetings/schedule',
+        headers: { authorization: `Bearer ${hostToken}` },
+        payload: {
+          title: 'Q4 Strategic Planning & Roadmap',
+          description: 'Quarterly review with executive staff',
+          scheduledStartAt: futureStart.toISOString(),
+          durationMinutes: 60,
+          timezone: 'Asia/Kolkata',
+          participantEmails: [attendeeUser.email, 'external.partner@partnercorp.com']
+        }
+      });
+
+      expect(response.statusCode).toBe(201);
+      const json = response.json();
+      expect(json.success).toBe(true);
+      expect(json.data.title).toBe('Q4 Strategic Planning & Roadmap');
+      expect(json.data.timezone).toBe('Asia/Kolkata');
+      expect(json.data.date).toBeDefined();
+      expect(json.data.startTime).toBeDefined();
+
+      const createdMeetingId = json.data._id || json.data.id;
+
+      // Verify invitee can retrieve this meeting in their upcoming list
+      const attendeeListRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/meetings/upcoming',
+        headers: { authorization: `Bearer ${attendeeToken}` }
+      });
+
+      expect(attendeeListRes.statusCode).toBe(200);
+      const attendeeListJson = attendeeListRes.json();
+      const found = attendeeListJson.data.meetings.find((m) => (m._id || m.id).toString() === createdMeetingId.toString());
+      expect(found).toBeDefined();
+      expect(found.myInvitationStatus).toBe('pending');
+      expect(found.myRole).toBe('attendee');
+
+      // Verify invitee can see the invitation in /meetings/invitations
+      const userInvsRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/meetings/invitations',
+        headers: { authorization: `Bearer ${attendeeToken}` }
+      });
+      expect(userInvsRes.statusCode).toBe(200);
+      expect(userInvsRes.json().data.invitations.length).toBeGreaterThan(0);
+
+      // Verify invitee can accept the invitation
+      const acceptRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/meetings/${createdMeetingId}/accept`,
+        headers: { authorization: `Bearer ${attendeeToken}` }
+      });
+      expect(acceptRes.statusCode).toBe(200);
+      expect(acceptRes.json().data.status).toBe('accepted');
+
+      // Verify host can inspect all invitations via /meetings/:meetingId/invitations
+      const hostInvsRes = await app.inject({
+        method: 'GET',
+        url: `/api/v1/meetings/${createdMeetingId}/invitations`,
+        headers: { authorization: `Bearer ${hostToken}` }
+      });
+      expect(hostInvsRes.statusCode).toBe(200);
+      const hostInvsData = hostInvsRes.json().data;
+      expect(hostInvsData.invitations.length).toBe(3); // host + attendee + external
+      const attendeeInv = hostInvsData.invitations.find((i) => i.email === attendeeUser.email);
+      expect(attendeeInv.status).toBe('accepted');
+
+      // Verify host can resend invitation to external participant
+      const externalInv = hostInvsData.invitations.find((i) => i.email === 'external.partner@partnercorp.com');
+      const resendRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/meetings/${createdMeetingId}/invitations/${externalInv.participantId}/resend`,
+        headers: { authorization: `Bearer ${hostToken}` }
+      });
+      expect(resendRes.statusCode).toBe(200);
+      expect(resendRes.json().success).toBe(true);
+
+      // Verify invitee can decline
+      const declineRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/meetings/${createdMeetingId}/decline`,
+        headers: { authorization: `Bearer ${attendeeToken}` }
+      });
+      expect(declineRes.statusCode).toBe(200);
+      expect(declineRes.json().data.status).toBe('declined');
+    });
+
+    it('should support retrieving past meetings via /meetings/past', async () => {
+      const pastRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/meetings/past',
+        headers: { authorization: `Bearer ${hostToken}` }
+      });
+      expect(pastRes.statusCode).toBe(200);
+      expect(Array.isArray(pastRes.json().data.meetings)).toBe(true);
+    });
+  });
 });

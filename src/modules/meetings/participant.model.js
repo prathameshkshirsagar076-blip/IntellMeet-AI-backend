@@ -11,8 +11,20 @@ const meetingParticipantSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: false,
+      default: null,
       index: true
+    },
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      index: true
+    },
+    name: {
+      type: String,
+      trim: true,
+      default: ''
     },
     role: {
       type: String,
@@ -21,8 +33,8 @@ const meetingParticipantSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['invited', 'joined', 'left'],
-      default: 'joined',
+      enum: ['invited', 'pending', 'accepted', 'declined', 'tentative', 'joined', 'left'],
+      default: 'invited',
       index: true
     },
     socketId: {
@@ -31,7 +43,7 @@ const meetingParticipantSchema = new mongoose.Schema(
     },
     joinedAt: {
       type: Date,
-      default: Date.now
+      default: null
     },
     leftAt: {
       type: Date,
@@ -40,6 +52,23 @@ const meetingParticipantSchema = new mongoose.Schema(
     lastSeenAt: {
       type: Date,
       default: Date.now
+    },
+    invitationSentAt: {
+      type: Date,
+      default: null
+    },
+    invitationDeliveryStatus: {
+      type: String,
+      enum: ['not_sent', 'sent', 'delivered', 'failed'],
+      default: 'not_sent'
+    },
+    invitationError: {
+      type: String,
+      default: null
+    },
+    respondedAt: {
+      type: Date,
+      default: null
     }
   },
   {
@@ -47,8 +76,17 @@ const meetingParticipantSchema = new mongoose.Schema(
   }
 );
 
-meetingParticipantSchema.index({ meetingId: 1, userId: 1 }, { unique: true });
+meetingParticipantSchema.index(
+  { meetingId: 1, userId: 1 },
+  { unique: true, partialFilterExpression: { userId: { $type: 'objectId' } } }
+);
+meetingParticipantSchema.index(
+  { meetingId: 1, email: 1 },
+  { unique: true, partialFilterExpression: { email: { $type: 'string' } } }
+);
 meetingParticipantSchema.index({ meetingId: 1, status: 1 });
+meetingParticipantSchema.index({ userId: 1, status: 1 });
+meetingParticipantSchema.index({ email: 1, status: 1 });
 
 meetingParticipantSchema.set('toJSON', {
   transform: (doc, ret) => {

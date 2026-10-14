@@ -368,4 +368,81 @@ export class MeetingController {
       return ApiResponse.error(reply, err.statusCode || 400, err.message, err.code || 'BAD_REQUEST');
     }
   }
+
+  static async getUpcoming(request, reply) {
+    try {
+      const userId = request.user.userId;
+      const { page, limit, search } = request.query || {};
+      const result = await MeetingService.getUpcomingMeetings({ userId, page, limit, search });
+      return ApiResponse.success(reply, 200, 'Upcoming meetings retrieved successfully', result);
+    } catch (err) {
+      return ApiResponse.error(reply, err.statusCode || 500, err.message, err.code || 'INTERNAL_ERROR');
+    }
+  }
+
+  static async getPast(request, reply) {
+    try {
+      const userId = request.user.userId;
+      const { page, limit, search } = request.query || {};
+      const result = await MeetingService.getPastMeetings({ userId, page, limit, search });
+      return ApiResponse.success(reply, 200, 'Past meetings retrieved successfully', result);
+    } catch (err) {
+      return ApiResponse.error(reply, err.statusCode || 500, err.message, err.code || 'INTERNAL_ERROR');
+    }
+  }
+
+  static async getUserInvitations(request, reply) {
+    try {
+      const userId = request.user.userId;
+      const { status } = request.query || {};
+      const result = await MeetingService.getUserInvitations(userId, status);
+      return ApiResponse.success(reply, 200, 'User invitations retrieved successfully', result);
+    } catch (err) {
+      return ApiResponse.error(reply, err.statusCode || 500, err.message, err.code || 'INTERNAL_ERROR');
+    }
+  }
+
+  static async getMeetingInvitations(request, reply) {
+    try {
+      const { meetingId } = request.params;
+      const userId = request.user.userId;
+      const result = await MeetingService.getMeetingInvitations(meetingId, userId);
+      return ApiResponse.success(reply, 200, 'Meeting invitations retrieved successfully', result);
+    } catch (err) {
+      return ApiResponse.error(reply, err.statusCode || 400, err.message, err.code || 'BAD_REQUEST');
+    }
+  }
+
+  static async acceptInvitation(request, reply) {
+    try {
+      const { meetingId } = request.params;
+      const userId = request.user.userId;
+      const result = await MeetingService.respondToInvitation({ meetingId, userId, action: 'accept' });
+      return ApiResponse.success(reply, 200, 'Invitation accepted successfully', result);
+    } catch (err) {
+      return ApiResponse.error(reply, err.statusCode || 400, err.message, err.code || 'BAD_REQUEST');
+    }
+  }
+
+  static async declineInvitation(request, reply) {
+    try {
+      const { meetingId } = request.params;
+      const userId = request.user.userId;
+      const result = await MeetingService.respondToInvitation({ meetingId, userId, action: 'decline' });
+      return ApiResponse.success(reply, 200, 'Invitation declined successfully', result);
+    } catch (err) {
+      return ApiResponse.error(reply, err.statusCode || 400, err.message, err.code || 'BAD_REQUEST');
+    }
+  }
+
+  static async resendInvitation(request, reply) {
+    try {
+      const { meetingId, invitationId } = request.params;
+      const userId = request.user.userId;
+      const result = await MeetingService.resendInvitation({ meetingId, invitationId, hostUserId: userId });
+      return ApiResponse.success(reply, 200, 'Invitation resent successfully', result);
+    } catch (err) {
+      return ApiResponse.error(reply, err.statusCode || 400, err.message, err.code || 'BAD_REQUEST');
+    }
+  }
 }

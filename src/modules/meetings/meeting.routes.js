@@ -21,7 +21,19 @@ export async function meetingRoutes(fastify) {
   // 2. List meetings
   fastify.get('/meetings', { schema: listMeetingsSchema }, MeetingController.list);
 
-  // 3. Meeting History (must be before /meetings/:meetingId)
+  // 3. Schedule meeting alias
+  fastify.post('/meetings/schedule', { schema: createMeetingSchema }, MeetingController.create);
+
+  // 4. Upcoming meetings (must be before /meetings/:meetingId)
+  fastify.get('/meetings/upcoming', MeetingController.getUpcoming);
+
+  // 5. Past meetings (must be before /meetings/:meetingId)
+  fastify.get('/meetings/past', MeetingController.getPast);
+
+  // 6. User received invitations (must be before /meetings/:meetingId)
+  fastify.get('/meetings/invitations', MeetingController.getUserInvitations);
+
+  // 7. Meeting History (must be before /meetings/:meetingId)
   fastify.get('/meetings/history', MeetingController.getHistory);
 
   // 4. Get meeting details
@@ -63,12 +75,20 @@ export async function meetingRoutes(fastify) {
   fastify.patch('/meetings/:meetingId/messages/:messageId', { schema: editMessageSchema }, MeetingController.editMessage);
   fastify.delete('/meetings/:meetingId/messages/:messageId', MeetingController.deleteMessage);
 
-  // 15. Meeting Invite
+  // 15. Meeting Invitations & Responses
+  fastify.get('/meetings/:meetingId/invitations', { schema: meetingIdParamSchema }, MeetingController.getMeetingInvitations);
+  fastify.post('/meetings/:meetingId/invitations/:invitationId/accept', MeetingController.acceptInvitation);
+  fastify.post('/meetings/:meetingId/invitations/:invitationId/decline', MeetingController.declineInvitation);
+  fastify.post('/meetings/:meetingId/invitations/:invitationId/resend', MeetingController.resendInvitation);
+  fastify.post('/meetings/:meetingId/accept', { schema: meetingIdParamSchema }, MeetingController.acceptInvitation);
+  fastify.post('/meetings/:meetingId/decline', { schema: meetingIdParamSchema }, MeetingController.declineInvitation);
+
+  // 16. Meeting Invite
   fastify.post('/meetings/:meetingId/invite', { schema: meetingIdParamSchema }, MeetingController.generateInvite);
 
-  // 16. Meeting Recordings
+  // 17. Meeting Recordings
   fastify.get('/meetings/:meetingId/recordings', { schema: meetingIdParamSchema }, MeetingController.getRecordings);
 
-  // 17. Meeting Status
+  // 18. Meeting Status
   fastify.get('/meetings/:meetingId/status', { schema: meetingIdParamSchema }, MeetingController.getStatus);
 }

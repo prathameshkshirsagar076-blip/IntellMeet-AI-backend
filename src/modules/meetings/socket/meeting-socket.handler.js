@@ -61,8 +61,14 @@ export function registerMeetingSocketHandlers(io, socket) {
 
       // Check passcode authorization if meeting has passcode and user is not host
       if (meeting.passcode && !isHost) {
-        const participantRecord = await MeetingParticipant.findOne({ meetingId: meeting._id, userId });
-        const hasValidParticipantStatus = participantRecord && (participantRecord.status === 'joined' || participantRecord.status === 'invited');
+        const participantRecord = await MeetingParticipant.findOne({
+          meetingId: meeting._id,
+          $or: [
+            { userId },
+            ...(userEmail ? [{ email: userEmail.toLowerCase() }] : [])
+          ]
+        });
+        const hasValidParticipantStatus = participantRecord && ['joined', 'invited', 'accepted', 'pending'].includes(participantRecord.status);
         const passcodeMatches = payload.passcode && payload.passcode.trim() === meeting.passcode.trim();
 
         if (!hasValidParticipantStatus && !passcodeMatches) {
@@ -73,9 +79,13 @@ export function registerMeetingSocketHandlers(io, socket) {
         }
       }
 
-      // Join socket room
+      // Join socket rooms (both ObjectId and meetingCode so either identifier works)
       socket.join(roomName);
       joinedMeetings.add(meetingIdStr);
+      if (meeting.meetingCode) {
+        socket.join(`meeting:${meeting.meetingCode}`);
+        joinedMeetings.add(meeting.meetingCode);
+      }
 
       // Register or update participant in DB
       await MeetingParticipant.findOneAndUpdate(
@@ -108,7 +118,11 @@ export function registerMeetingSocketHandlers(io, socket) {
         socketId: socket.id,
         name: userName,
         email: userEmail,
-        role: isHost ? 'host' : 'attendee'
+        role: isHost ? 'host' : 'attendee',
+        isAudioMuted: typeof payload.isAudioMuted === 'boolean' ? payload.isAudioMuted : true,
+        isVideoOn: typeof payload.isVideoOn === 'boolean' ? payload.isVideoOn : false,
+        isScreenSharing: typeof payload.isScreenSharing === 'boolean' ? payload.isScreenSharing : false,
+        isHandRaised: typeof payload.isHandRaised === 'boolean' ? payload.isHandRaised : false
       };
 
       roomPeersMap.set(socket.id, participantInfo);
@@ -117,6 +131,11 @@ export function registerMeetingSocketHandlers(io, socket) {
       socket.to(roomName).emit('meeting:participant:joined', {
         participant: participantInfo
       });
+      if (meeting.meetingCode) {
+        socket.to(`meeting:${meeting.meetingCode}`).emit('meeting:participant:joined', {
+          participant: participantInfo
+        });
+      }
 
       // Send ack to joining client with existing peers so it can initiate/await WebRTC
       const joinResponse = {
@@ -347,34 +366,77 @@ export function registerMeetingSocketHandlers(io, socket) {
   /**
    * Live In-Meeting Chat: Typing indicator
    */
-  socket.on('meeting:chat:typing', (payload) => {
+  socket.on('meeting:chat:typing', async (payload) => {
     const { meetingId, isTyping } = payload || {};
     if (!meetingId) return;
 
-    socket.to(`meeting:${meetingId}`).emit('meeting:chat:typing', {
-      meetingId,
+    let targetMeetingId = meetingId;
+    let meetingCode = null;
+    try {
+      const resolved = await MeetingService.resolveMeeting(meetingId);
+      if (resolved) {
+        targetMeetingId = resolved._id.toString();
+        meetingCode = resolved.meetingCode;
+      }
+    } catch {
+      // Fallback
+    }
+
+    const typingPayload = {
+      meetingId: targetMeetingId,
       userId,
       name: userName,
       isTyping: Boolean(isTyping)
-    });
+    };
+
+    socket.to(`meeting:${targetMeetingId}`).emit('meeting:chat:typing', typingPayload);
+    if (meetingCode && meetingCode !== targetMeetingId) {
+      socket.to(`meeting:${meetingCode}`).emit('meeting:chat:typing', typingPayload);
+    }
   });
 
   /**
    * Participant Media State: Mute / Video / ScreenShare / HandRaise
    */
-  socket.on('meeting:media:state', (payload) => {
+  socket.on('meeting:media:state', async (payload) => {
     const { meetingId, isAudioMuted, isVideoOn, isScreenSharing, isHandRaised } = payload || {};
     if (!meetingId) return;
 
-    socket.to(`meeting:${meetingId}`).emit('meeting:media:update', {
-      meetingId,
+    let targetMeetingId = meetingId;
+    let meetingCode = null;
+    try {
+      const resolved = await MeetingService.resolveMeeting(meetingId);
+      if (resolved) {
+        targetMeetingId = resolved._id.toString();
+        meetingCode = resolved.meetingCode;
+      }
+    } catch {
+      // Fallback
+    }
+
+    const roomPeersMap = activeMeetingPeers.get(targetMeetingId);
+    if (roomPeersMap && roomPeersMap.has(socket.id)) {
+      const p = roomPeersMap.get(socket.id);
+      if (typeof isAudioMuted === 'boolean') p.isAudioMuted = isAudioMuted;
+      if (typeof isVideoOn === 'boolean') p.isVideoOn = isVideoOn;
+      if (typeof isScreenSharing === 'boolean') p.isScreenSharing = isScreenSharing;
+      if (typeof isHandRaised === 'boolean') p.isHandRaised = isHandRaised;
+    }
+
+    const mediaPayload = {
+      meetingId: targetMeetingId,
       userId,
       socketId: socket.id,
       isAudioMuted: Boolean(isAudioMuted),
       isVideoOn: Boolean(isVideoOn),
       isScreenSharing: Boolean(isScreenSharing),
       isHandRaised: Boolean(isHandRaised)
-    });
+    };
+
+    socket.to(`meeting:${targetMeetingId}`).emit('meeting:media:update', mediaPayload);
+    if (meetingCode && meetingCode !== targetMeetingId) {
+      socket.to(`meeting:${meetingCode}`).emit('meeting:media:update', mediaPayload);
+    }
   });
 
   /**

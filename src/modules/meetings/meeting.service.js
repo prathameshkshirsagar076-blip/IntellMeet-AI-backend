@@ -945,10 +945,27 @@ export class MeetingService {
 
     const isOrganizer = meeting.organizerId._id.toString() === user.userId.toString();
 
-    if (meeting.passcode && !isOrganizer) {
+    // Check if user is an authorized participant (organizer, or explicitly invited/accepted participant)
+    let userEmail = user.email ? user.email.toLowerCase() : null;
+    if (!userEmail) {
+      const uDoc = await User.findById(user.userId).select('email');
+      if (uDoc?.email) userEmail = uDoc.email.toLowerCase();
+    }
+
+    const existingParticipant = await MeetingParticipant.findOne({
+      meetingId: meeting._id,
+      $or: [
+        { userId: user.userId },
+        ...(userEmail ? [{ email: userEmail }] : [])
+      ]
+    });
+
+    const isAuthorizedInvitee = existingParticipant && ['accepted', 'pending', 'invited', 'joined'].includes(existingParticipant.status);
+
+    if (meeting.passcode && !isOrganizer && !isAuthorizedInvitee) {
       if (!passcode || meeting.passcode.trim() !== passcode.trim()) {
         const err = new Error('Invalid meeting passcode');
-        err.statusCode = 401;
+        err.statusCode = 403;
         err.code = 'INVALID_PASSCODE';
         throw err;
       }

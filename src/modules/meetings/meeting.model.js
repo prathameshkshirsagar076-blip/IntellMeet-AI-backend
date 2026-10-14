@@ -55,6 +55,11 @@ const meetingSchema = new mongoose.Schema(
       trim: true,
       default: ''
     },
+    timezone: {
+      type: String,
+      trim: true,
+      default: 'UTC'
+    },
     settings: {
       allowChat: { type: Boolean, default: true },
       allowScreenShare: { type: Boolean, default: true },

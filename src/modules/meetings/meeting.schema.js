@@ -14,7 +14,12 @@ export const createMeetingSchema = {
       durationMinutes: { type: 'number', minimum: 5, maximum: 1440 },
       isInstant: { type: 'boolean' },
       passcode: { type: 'string' },
+      timezone: { type: 'string' },
       participantEmails: {
+        type: 'array',
+        items: { type: 'string' }
+      },
+      participantUserIds: {
         type: 'array',
         items: { type: 'string' }
       },
@@ -40,6 +45,7 @@ export const listMeetingsSchema = {
     type: 'object',
     properties: {
       status: { type: 'string', enum: ['upcoming', 'live', 'completed', 'cancelled'] },
+      type: { type: 'string', enum: ['upcoming', 'past', 'invitations'] },
       page: { type: 'integer', minimum: 1, default: 1 },
       limit: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
       search: { type: 'string' },
@@ -80,6 +86,7 @@ export const updateMeetingSchema = {
       scheduledStartAt: { type: 'string' },
       durationMinutes: { type: 'number', minimum: 5, maximum: 1440 },
       passcode: { type: 'string' },
+      timezone: { type: 'string' },
       settings: {
         type: 'object',
         properties: {

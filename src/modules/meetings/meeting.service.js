@@ -398,11 +398,15 @@ export class MeetingService {
       throw err;
     }
 
-    if (meeting.passcode && passcode && meeting.passcode !== passcode) {
-      const err = new Error('Invalid meeting passcode');
-      err.statusCode = 401;
-      err.code = 'INVALID_PASSCODE';
-      throw err;
+    const isOrganizer = meeting.organizerId._id.toString() === user.userId.toString();
+
+    if (meeting.passcode && !isOrganizer) {
+      if (!passcode || meeting.passcode.trim() !== passcode.trim()) {
+        const err = new Error('Invalid meeting passcode');
+        err.statusCode = 401;
+        err.code = 'INVALID_PASSCODE';
+        throw err;
+      }
     }
 
     // Check capacity
@@ -417,8 +421,6 @@ export class MeetingService {
       err.code = 'MEETING_CAPACITY_REACHED';
       throw err;
     }
-
-    const isOrganizer = meeting.organizerId._id.toString() === user.userId.toString();
 
     // If meeting was upcoming, transition to live
     if (meeting.status === 'upcoming' && isOrganizer) {

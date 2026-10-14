@@ -50,6 +50,7 @@ messageSchema.index({ senderId: 1, clientMessageId: 1 }, { unique: true });
 // Compound indexes supporting efficient conversation history queries and pagination
 messageSchema.index({ conversationId: 1, createdAt: -1 });
 messageSchema.index({ conversationId: 1, _id: -1 });
+messageSchema.index({ conversationId: 1, deletedAt: 1, _id: -1 });
 
 // Transform to sanitize and handle soft-deletion presentation
 messageSchema.set('toJSON', {

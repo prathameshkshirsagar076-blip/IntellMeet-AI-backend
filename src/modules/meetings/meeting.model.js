@@ -85,4 +85,12 @@ meetingSchema.index({ organizerId: 1, status: 1 });
 meetingSchema.index({ status: 1, scheduledStartAt: 1 });
 meetingSchema.index({ deletedAt: 1, status: 1 });
 
+meetingSchema.set('toJSON', {
+  transform: (doc, ret) => {
+    delete ret.__v;
+    ret.id = ret._id;
+    return ret;
+  }
+});
+
 export const Meeting = mongoose.model('Meeting', meetingSchema);

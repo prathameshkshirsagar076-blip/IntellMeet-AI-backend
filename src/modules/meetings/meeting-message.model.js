@@ -56,4 +56,12 @@ meetingMessageSchema.index({ meetingId: 1, createdAt: 1 });
 meetingMessageSchema.index({ meetingId: 1, isDeleted: 1, createdAt: 1 });
 meetingMessageSchema.index({ meetingId: 1, clientMessageId: 1 });
 
+meetingMessageSchema.set('toJSON', {
+  transform: (doc, ret) => {
+    delete ret.__v;
+    ret.id = ret._id;
+    return ret;
+  }
+});
+
 export const MeetingMessage = mongoose.model('MeetingMessage', meetingMessageSchema);

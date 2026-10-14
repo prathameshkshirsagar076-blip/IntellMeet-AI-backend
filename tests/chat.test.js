@@ -556,5 +556,63 @@ describe('Chat REST API Tests', () => {
       expect(resC.statusCode).toBe(200);
       expect(resC.json().data.messages.length).toBe(0);
     });
+
+    it('POST /api/v1/chat/conversations/:conversationId/messages should send a message through the backend', async () => {
+      const conv = await ChatService.getOrCreateConversation(userA.id, userB.id);
+      const convId = conv._id.toString();
+
+      // 1. Should reject without auth
+      const unauthRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/chat/conversations/${convId}/messages`,
+        payload: { content: 'Hello REST' }
+      });
+      expect(unauthRes.statusCode).toBe(401);
+
+      // 2. Should reject unauthorized user (User C)
+      const nonMemberRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/chat/conversations/${convId}/messages`,
+        headers: { authorization: `Bearer ${tokenC}` },
+        payload: { content: 'Intruder message' }
+      });
+      expect(nonMemberRes.statusCode).toBe(404);
+
+      // 3. Should reject empty content
+      const emptyRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/chat/conversations/${convId}/messages`,
+        headers: { authorization: `Bearer ${tokenA}` },
+        payload: { content: '   ' }
+      });
+      expect(emptyRes.statusCode).toBe(400);
+
+      // 4. Successful send by authorized member
+      const sendRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/chat/conversations/${convId}/messages`,
+        headers: { authorization: `Bearer ${tokenA}` },
+        payload: {
+          content: 'Hello via backend REST endpoint',
+          clientMessageId: 'cmsg-test-rest-1'
+        }
+      });
+
+      expect(sendRes.statusCode).toBe(201);
+      const body = sendRes.json();
+      expect(body.success).toBe(true);
+      expect(body.data.message.content).toBe('Hello via backend REST endpoint');
+      expect(body.data.message.conversationId.toString()).toBe(convId);
+
+      // Verify retrieval via messages list
+      const listRes = await app.inject({
+        method: 'GET',
+        url: `/api/v1/chat/conversations/${convId}/messages`,
+        headers: { authorization: `Bearer ${tokenA}` }
+      });
+      expect(listRes.statusCode).toBe(200);
+      const messages = listRes.json().data.messages;
+      expect(messages.some((m) => m.content === 'Hello via backend REST endpoint')).toBe(true);
+    });
   });
 });

@@ -86,6 +86,25 @@ export class ChatController {
   }
 
   /**
+   * 5b. POST /api/v1/chat/conversations/:conversationId/messages
+   */
+  static async sendMessage(request, reply) {
+    const { conversationId } = request.params;
+    const { content, clientMessageId, messageType } = request.body;
+    const userId = request.user.userId;
+
+    const result = await ChatService.sendMessage({
+      conversationId,
+      senderId: userId,
+      clientMessageId: clientMessageId || `cmsg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      content,
+      messageType: messageType || 'text'
+    });
+
+    return ApiResponse.success(reply, 201, 'Message sent successfully', { message: result.message });
+  }
+
+  /**
    * 6. GET /api/v1/chat/messages/:messageId
    */
   static async getMessageById(request, reply) {

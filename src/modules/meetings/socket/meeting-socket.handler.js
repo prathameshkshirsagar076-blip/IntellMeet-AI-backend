@@ -15,6 +15,7 @@ export function registerMeetingSocketHandlers(io, socket) {
   const userId = socket.user?.userId;
   const userName = socket.user?.name || 'User';
   const userEmail = socket.user?.email || '';
+  const userRole = socket.user?.role || 'attendee';
 
   // Track meetings this socket has joined
   const joinedMeetings = new Set();
@@ -57,6 +58,20 @@ export function registerMeetingSocketHandlers(io, socket) {
       const meetingIdStr = meeting._id.toString();
       const roomName = `meeting:${meetingIdStr}`;
       const isHost = meeting.organizerId._id.toString() === userId.toString();
+
+      // Check passcode authorization if meeting has passcode and user is not host
+      if (meeting.passcode && !isHost) {
+        const participantRecord = await MeetingParticipant.findOne({ meetingId: meeting._id, userId });
+        const hasValidParticipantStatus = participantRecord && (participantRecord.status === 'joined' || participantRecord.status === 'invited');
+        const passcodeMatches = payload.passcode && payload.passcode.trim() === meeting.passcode.trim();
+
+        if (!hasValidParticipantStatus && !passcodeMatches) {
+          const errPayload = { code: 'INVALID_PASSCODE', message: 'Invalid or missing meeting passcode' };
+          socket.emit('meeting:error', errPayload);
+          if (typeof callback === 'function') callback({ success: false, error: errPayload });
+          return;
+        }
+      }
 
       // Join socket room
       socket.join(roomName);
@@ -169,11 +184,14 @@ export function registerMeetingSocketHandlers(io, socket) {
     const { meetingId, targetSocketId, offer } = payload || {};
     if (!meetingId || !targetSocketId || !offer) return;
 
-    // Relay to target peer
+    // Relay to target peer with sender metadata
     io.to(targetSocketId).emit('meeting:signal:offer', {
       meetingId,
       senderSocketId: socket.id,
       senderUserId: userId,
+      senderName: userName,
+      senderEmail: userEmail,
+      senderRole: userRole,
       offer
     });
   });

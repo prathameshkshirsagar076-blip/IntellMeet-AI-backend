@@ -50,4 +50,12 @@ const meetingParticipantSchema = new mongoose.Schema(
 meetingParticipantSchema.index({ meetingId: 1, userId: 1 }, { unique: true });
 meetingParticipantSchema.index({ meetingId: 1, status: 1 });
 
+meetingParticipantSchema.set('toJSON', {
+  transform: (doc, ret) => {
+    delete ret.__v;
+    ret.id = ret._id;
+    return ret;
+  }
+});
+
 export const MeetingParticipant = mongoose.model('MeetingParticipant', meetingParticipantSchema);

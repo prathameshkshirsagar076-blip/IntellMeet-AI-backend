@@ -62,6 +62,7 @@ const conversationSchema = new mongoose.Schema(
 // Indexes
 conversationSchema.index({ participants: 1 });
 conversationSchema.index({ lastMessageAt: -1 });
+conversationSchema.index({ participants: 1, lastMessageAt: -1 });
 conversationSchema.index({ 'hiddenFor': 1 });
 
 // Helper function to calculate a canonical pair identity

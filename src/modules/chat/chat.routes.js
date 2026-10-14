@@ -6,6 +6,7 @@ import {
   getConversationByIdSchema,
   deleteConversationSchema,
   getMessagesSchema,
+  sendMessageSchema,
   getMessageByIdSchema,
   editMessageSchema,
   deleteMessageSchema,
@@ -62,6 +63,15 @@ export async function chatRoutes(fastify, opts) {
       schema: getMessagesSchema
     },
     ChatController.getMessages
+  );
+
+  fastify.post(
+    '/chat/conversations/:conversationId/messages',
+    {
+      preHandler: [authenticate],
+      schema: sendMessageSchema
+    },
+    ChatController.sendMessage
   );
 
   fastify.get(

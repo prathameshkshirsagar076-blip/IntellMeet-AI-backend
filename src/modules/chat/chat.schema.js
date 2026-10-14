@@ -186,6 +186,45 @@ export const getMessagesSchema = {
   }
 };
 
+export const sendMessageSchema = {
+  description: 'Send a message in a direct conversation',
+  summary: 'Send Message',
+  tags: ['Chat'],
+  security: [{ bearerAuth: [] }],
+  params: {
+    type: 'object',
+    required: ['conversationId'],
+    properties: {
+      conversationId: { type: 'string' }
+    }
+  },
+  body: {
+    type: 'object',
+    required: ['content'],
+    properties: {
+      content: { type: 'string', minLength: 1, maxLength: 5000 },
+      clientMessageId: { type: 'string' },
+      messageType: { type: 'string', enum: ['text', 'image', 'file'], default: 'text' }
+    }
+  },
+  response: {
+    201: {
+      description: 'Message sent successfully',
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        data: {
+          type: 'object',
+          properties: {
+            message: { type: 'object', additionalProperties: true }
+          }
+        }
+      }
+    }
+  }
+};
+
 export const getMessageByIdSchema = {
   description: 'Fetch a single message by ID (requester must be an authorized conversation participant)',
   summary: 'Get Message By ID',

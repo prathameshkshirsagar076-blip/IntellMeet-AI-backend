@@ -51,10 +51,17 @@ export function initChatSocket(httpServer, options = {}) {
   io.use(async (socket, next) => {
     try {
       const authHeader = socket.handshake.headers?.authorization;
-      const token =
+      const rawToken =
         socket.handshake.auth?.token ||
         (authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null) ||
         socket.handshake.query?.token;
+
+      const token =
+        typeof rawToken === 'string' && rawToken.startsWith('Bearer ')
+          ? rawToken.slice(7).trim()
+          : typeof rawToken === 'string'
+          ? rawToken.trim()
+          : null;
 
       if (!token) {
         if (process.env.NODE_ENV !== 'test') {

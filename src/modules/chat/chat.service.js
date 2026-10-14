@@ -444,16 +444,14 @@ export class ChatService {
         }
       };
 
-      // Broadcast to conversation room and directly to recipient's personal user room
-      io.to(`conversation:${conversationId}`).emit('message:new', {
-        message: messagePayload,
-        conversationId
-      });
-
-      io.to(`user:${recipientId}`).emit('message:new', {
-        message: messagePayload,
-        conversationId
-      });
+      // Broadcast to conversation room and directly to recipient and sender user rooms (deduplicated by Socket.IO)
+      io.to(`conversation:${conversationId}`)
+        .to(`user:${recipientId}`)
+        .to(`user:${senderId}`)
+        .emit('message:new', {
+          message: messagePayload,
+          conversationId
+        });
     }
 
     return {
@@ -715,10 +713,9 @@ export class ChatService {
         conversationId: message.conversationId
       };
 
-      io.to(`conversation:${message.conversationId}`).emit('message:edited', eventPayload);
-      if (recipientId) {
-        io.to(`user:${recipientId}`).emit('message:edited', eventPayload);
-      }
+      const editBroadcast = io.to(`conversation:${message.conversationId}`);
+      if (recipientId) editBroadcast.to(`user:${recipientId}`);
+      editBroadcast.to(`user:${userId}`).emit('message:edited', eventPayload);
     }
 
     return message;
@@ -779,10 +776,9 @@ export class ChatService {
           deletedAt: message.deletedAt
         };
 
-        io.to(`conversation:${message.conversationId}`).emit('message:deleted', deletePayload);
-        if (recipientId) {
-          io.to(`user:${recipientId}`).emit('message:deleted', deletePayload);
-        }
+        const deleteBroadcast = io.to(`conversation:${message.conversationId}`);
+        if (recipientId) deleteBroadcast.to(`user:${recipientId}`);
+        deleteBroadcast.to(`user:${userId}`).emit('message:deleted', deletePayload);
       }
     }
 
@@ -851,10 +847,9 @@ export class ChatService {
         affectedCount
       };
 
-      io.to(`conversation:${conversationId}`).emit('message:read', readPayload);
-      if (senderId) {
-        io.to(`user:${senderId}`).emit('message:read', readPayload);
-      }
+      const readBroadcast = io.to(`conversation:${conversationId}`);
+      if (senderId) readBroadcast.to(`user:${senderId}`);
+      readBroadcast.to(`user:${userId}`).emit('message:read', readPayload);
     }
 
     return {
@@ -967,8 +962,9 @@ export class ChatService {
         deliveredAt: receipt.deliveredAt
       };
 
-      io.to(`conversation:${message.conversationId}`).emit('message:delivered', deliveredPayload);
-      io.to(`user:${message.senderId}`).emit('message:delivered', deliveredPayload);
+      io.to(`conversation:${message.conversationId}`)
+        .to(`user:${message.senderId}`)
+        .emit('message:delivered', deliveredPayload);
     }
 
     return receipt;

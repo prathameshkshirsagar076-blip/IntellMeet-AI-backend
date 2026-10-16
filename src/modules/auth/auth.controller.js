@@ -237,8 +237,26 @@ export class AuthController {
 
     // In GET (Google redirects directly to backend)
     if (!isPost) {
-      const frontendUrl = (env.FRONTEND_URL || 'http://localhost:5173').split(',')[0].trim();
       const { code, state, error, error_description } = request.query || {};
+      let frontendUrl = (env.FRONTEND_URL || 'http://localhost:5173').split(',')[0].trim();
+      if (state && typeof state === 'string' && state.includes('.')) {
+        try {
+          const payloadPart = state.split('.')[0];
+          const decoded = JSON.parse(Buffer.from(payloadPart, 'base64url').toString('utf8'));
+          if (decoded?.redirectUri) {
+            const parsedOrigin = new URL(decoded.redirectUri).origin;
+            const allowedOrigins = (env.FRONTEND_URL || '')
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean);
+            if (allowedOrigins.length === 0 || allowedOrigins.includes(parsedOrigin)) {
+              frontendUrl = parsedOrigin;
+            }
+          }
+        } catch {
+          // fallback to default frontendUrl
+        }
+      }
 
       if (error) {
         reply.clearCookie('oauth_state', { path: '/' });
@@ -256,7 +274,7 @@ export class AuthController {
         const { user, accessToken, refreshToken } = await AuthService.handleGoogleCallback({
           code,
           state,
-          redirectUri: env.GOOGLE.CALLBACK_URL,
+          redirectUri: request.query?.redirect_uri || undefined,
           cookieState,
           deviceName,
           ipAddress,

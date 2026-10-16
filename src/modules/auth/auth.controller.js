@@ -266,7 +266,16 @@ export class AuthController {
         setRefreshTokenCookie(reply, refreshToken, true);
         reply.clearCookie('oauth_state', { path: '/' });
 
-        const redirectTarget = `${frontendUrl}/auth/google/callback?token=${encodeURIComponent(accessToken)}&refreshToken=${encodeURIComponent(refreshToken)}`;
+        const userPayload = {
+          id: user._id?.toString() || user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          avatar: user.avatar,
+          authProvider: user.authProvider
+        };
+        const userJson = encodeURIComponent(JSON.stringify(userPayload));
+        const redirectTarget = `${frontendUrl}/auth/google/callback?token=${encodeURIComponent(accessToken)}&refreshToken=${encodeURIComponent(refreshToken)}&user=${userJson}`;
         return reply.redirect(redirectTarget);
       } catch (err) {
         reply.clearCookie('oauth_state', { path: '/' });

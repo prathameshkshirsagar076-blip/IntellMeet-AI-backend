@@ -34,23 +34,78 @@ export const env = {
   COOKIE_SECURE: process.env.COOKIE_SECURE === 'true',
 
   GOOGLE: {
-    CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
-    CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
-    CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/v1/auth/google/callback'
+    get CLIENT_ID() {
+      return (process.env.GOOGLE_CLIENT_ID || '').trim();
+    },
+    set CLIENT_ID(val) {
+      process.env.GOOGLE_CLIENT_ID = val != null ? String(val) : '';
+    },
+    get CLIENT_SECRET() {
+      return (process.env.GOOGLE_CLIENT_SECRET || '').trim();
+    },
+    set CLIENT_SECRET(val) {
+      process.env.GOOGLE_CLIENT_SECRET = val != null ? String(val) : '';
+    },
+    get CALLBACK_URL() {
+      return (process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/v1/auth/google/callback').trim();
+    },
+    set CALLBACK_URL(val) {
+      process.env.GOOGLE_CALLBACK_URL = val != null ? String(val) : '';
+    }
   },
 
   MICROSOFT: {
-    CLIENT_ID: process.env.MICROSOFT_CLIENT_ID || '',
-    CLIENT_SECRET: process.env.MICROSOFT_CLIENT_SECRET || '',
-    TENANT_ID: process.env.MICROSOFT_TENANT_ID || '',
-    CALLBACK_URL: process.env.MICROSOFT_CALLBACK_URL || 'http://localhost:5000/api/v1/auth/microsoft/callback'
+    get CLIENT_ID() {
+      return (process.env.MICROSOFT_CLIENT_ID || '').trim();
+    },
+    set CLIENT_ID(val) {
+      process.env.MICROSOFT_CLIENT_ID = val != null ? String(val) : '';
+    },
+    get CLIENT_SECRET() {
+      return (process.env.MICROSOFT_CLIENT_SECRET || '').trim();
+    },
+    set CLIENT_SECRET(val) {
+      process.env.MICROSOFT_CLIENT_SECRET = val != null ? String(val) : '';
+    },
+    get TENANT_ID() {
+      return (process.env.MICROSOFT_TENANT_ID || '').trim();
+    },
+    set TENANT_ID(val) {
+      process.env.MICROSOFT_TENANT_ID = val != null ? String(val) : '';
+    },
+    get CALLBACK_URL() {
+      return (process.env.MICROSOFT_CALLBACK_URL || 'http://localhost:5000/api/v1/auth/microsoft/callback').trim();
+    },
+    set CALLBACK_URL(val) {
+      process.env.MICROSOFT_CALLBACK_URL = val != null ? String(val) : '';
+    }
   },
 
   SAML: {
-    ENTRY_POINT: process.env.SAML_ENTRY_POINT || '',
-    ISSUER: process.env.SAML_ISSUER || '',
-    CALLBACK_URL: process.env.SAML_CALLBACK_URL || 'http://localhost:5000/api/v1/auth/saml/callback',
-    CERT: process.env.SAML_CERT || ''
+    get ENTRY_POINT() {
+      return (process.env.SAML_ENTRY_POINT || '').trim();
+    },
+    set ENTRY_POINT(val) {
+      process.env.SAML_ENTRY_POINT = val != null ? String(val) : '';
+    },
+    get ISSUER() {
+      return (process.env.SAML_ISSUER || '').trim();
+    },
+    set ISSUER(val) {
+      process.env.SAML_ISSUER = val != null ? String(val) : '';
+    },
+    get CALLBACK_URL() {
+      return (process.env.SAML_CALLBACK_URL || 'http://localhost:5000/api/v1/auth/saml/callback').trim();
+    },
+    set CALLBACK_URL(val) {
+      process.env.SAML_CALLBACK_URL = val != null ? String(val) : '';
+    },
+    get CERT() {
+      return (process.env.SAML_CERT || '').trim();
+    },
+    set CERT(val) {
+      process.env.SAML_CERT = val != null ? String(val) : '';
+    }
   },
 
   SMTP: {

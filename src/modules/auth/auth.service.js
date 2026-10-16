@@ -1,6 +1,7 @@
 import { User } from '../users/user.model.js';
 import { SessionService } from '../sessions/session.service.js';
 import { generateAccessToken, generateRefreshToken } from '../../utils/tokens.js';
+import { GoogleOAuthService } from './google-oauth.service.js';
 import { env } from '../../config/env.js';
 
 export class AuthService {
@@ -95,7 +96,15 @@ export class AuthService {
   }
 
   static isGoogleConfigured() {
-    return Boolean(env.GOOGLE.CLIENT_ID && env.GOOGLE.CLIENT_SECRET);
+    return GoogleOAuthService.isConfigured();
+  }
+
+  static getGoogleAuthUrl(options) {
+    return GoogleOAuthService.getAuthorizationUrl(options);
+  }
+
+  static async handleGoogleCallback(params) {
+    return GoogleOAuthService.handleCallback(params);
   }
 
   static isMicrosoftConfigured() {

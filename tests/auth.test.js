@@ -4,6 +4,7 @@ import { User } from '../src/modules/users/user.model.js';
 import { PasswordReset } from '../src/modules/password-reset/password-reset.model.js';
 import { Session } from '../src/modules/sessions/session.model.js';
 import { hashToken } from '../src/utils/tokens.js';
+import { env } from '../src/config/env.js';
 
 describe('Authentication Module Tests', () => {
   let app;
@@ -346,34 +347,106 @@ describe('Authentication Module Tests', () => {
 
   describe('OAuth & SAML Error Boundaries', () => {
     it('GET /api/v1/auth/google should return 501 when Google OAuth credentials are not configured', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/api/v1/auth/google'
-      });
+      const origSecret = env.GOOGLE.CLIENT_SECRET;
+      const origClientId = env.GOOGLE.CLIENT_ID;
+      try {
+        env.GOOGLE.CLIENT_SECRET = '';
+        env.GOOGLE.CLIENT_ID = '';
 
-      expect(res.statusCode).toBe(501);
-      const body = res.json();
-      expect(body.error.code).toBe('PROVIDER_NOT_CONFIGURED');
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/v1/auth/google'
+        });
+
+        expect(res.statusCode).toBe(501);
+        const body = res.json();
+        expect(body.error.code).toBe('PROVIDER_NOT_CONFIGURED');
+      } finally {
+        env.GOOGLE.CLIENT_SECRET = origSecret;
+        env.GOOGLE.CLIENT_ID = origClientId;
+      }
+    });
+
+    it('GET /api/v1/auth/google should return 501 when Google OAuth credentials contain invalid placeholders', async () => {
+      const origSecret = env.GOOGLE.CLIENT_SECRET;
+      const origClientId = env.GOOGLE.CLIENT_ID;
+      try {
+        env.GOOGLE.CLIENT_ID = 'your_google_client_id';
+        env.GOOGLE.CLIENT_SECRET = 'your_client_secret_here';
+
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/v1/auth/google'
+        });
+
+        expect(res.statusCode).toBe(501);
+        const body = res.json();
+        expect(body.error.code).toBe('PROVIDER_NOT_CONFIGURED');
+      } finally {
+        env.GOOGLE.CLIENT_SECRET = origSecret;
+        env.GOOGLE.CLIENT_ID = origClientId;
+      }
+    });
+
+    it('GET /api/v1/auth/google should redirect to Google OAuth when valid credentials are configured', async () => {
+      const origSecret = env.GOOGLE.CLIENT_SECRET;
+      const origClientId = env.GOOGLE.CLIENT_ID;
+      try {
+        env.GOOGLE.CLIENT_ID = '545957805612-mdlnkg7m528bsac197rm2lh09dhb0fuo.apps.googleusercontent.com';
+        env.GOOGLE.CLIENT_SECRET = 'valid_test_secret_123';
+
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/v1/auth/google'
+        });
+
+        expect(res.statusCode).toBe(302);
+        expect(res.headers.location).toContain('accounts.google.com/o/oauth2/v2/auth');
+        expect(res.headers.location).toContain('client_id=545957805612');
+      } finally {
+        env.GOOGLE.CLIENT_SECRET = origSecret;
+        env.GOOGLE.CLIENT_ID = origClientId;
+      }
     });
 
     it('GET /api/v1/auth/microsoft should return 501 when Microsoft credentials are not configured', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/api/v1/auth/microsoft'
-      });
+      const origSecret = env.MICROSOFT.CLIENT_SECRET;
+      const origClientId = env.MICROSOFT.CLIENT_ID;
+      try {
+        env.MICROSOFT.CLIENT_SECRET = '';
+        env.MICROSOFT.CLIENT_ID = '';
 
-      expect(res.statusCode).toBe(501);
-      expect(res.json().error.code).toBe('PROVIDER_NOT_CONFIGURED');
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/v1/auth/microsoft'
+        });
+
+        expect(res.statusCode).toBe(501);
+        expect(res.json().error.code).toBe('PROVIDER_NOT_CONFIGURED');
+      } finally {
+        env.MICROSOFT.CLIENT_SECRET = origSecret;
+        env.MICROSOFT.CLIENT_ID = origClientId;
+      }
     });
 
     it('GET /api/v1/auth/saml/login should return 501 when SAML SSO is not configured', async () => {
-      const res = await app.inject({
-        method: 'GET',
-        url: '/api/v1/auth/saml/login'
-      });
+      const origEntry = env.SAML.ENTRY_POINT;
+      const origIssuer = env.SAML.ISSUER;
+      try {
+        env.SAML.ENTRY_POINT = '';
+        env.SAML.ISSUER = '';
 
-      expect(res.statusCode).toBe(501);
-      expect(res.json().error.code).toBe('PROVIDER_NOT_CONFIGURED');
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/v1/auth/saml/login'
+        });
+
+        expect(res.statusCode).toBe(501);
+        expect(res.json().error.code).toBe('PROVIDER_NOT_CONFIGURED');
+      } finally {
+        env.SAML.ENTRY_POINT = origEntry;
+        env.SAML.ISSUER = origIssuer;
+      }
     });
   });
 });

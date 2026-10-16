@@ -17,7 +17,33 @@ export class GoogleOAuthService {
    * Check if Google OAuth is configured with valid Client ID & Client Secret
    */
   static isConfigured() {
-    return Boolean(env.GOOGLE.CLIENT_ID && env.GOOGLE.CLIENT_SECRET);
+    const clientId = (env.GOOGLE.CLIENT_ID || '').trim();
+    const clientSecret = (env.GOOGLE.CLIENT_SECRET || '').trim();
+
+    if (!clientId || !clientSecret) {
+      return false;
+    }
+
+    const invalidPlaceholders = [
+      'undefined',
+      'null',
+      'your_google_client_id',
+      'your_google_client_secret',
+      'your_google_client_secret_here',
+      'your_client_secret_here',
+      'your_client_id_here'
+    ];
+
+    if (
+      invalidPlaceholders.includes(clientId.toLowerCase()) ||
+      invalidPlaceholders.includes(clientSecret.toLowerCase()) ||
+      clientId.startsWith('<') ||
+      clientSecret.startsWith('<')
+    ) {
+      return false;
+    }
+
+    return true;
   }
 
   /**

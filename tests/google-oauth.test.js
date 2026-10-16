@@ -66,43 +66,74 @@ describe('Google OAuth 2.0 Integration & Security Tests', () => {
   describe('1. Provider Configuration & Discovery', () => {
     it('should return 501 when Google OAuth credentials are not configured', async () => {
       const origSecret = env.GOOGLE.CLIENT_SECRET;
-      env.GOOGLE.CLIENT_SECRET = '';
+      const origId = env.GOOGLE.CLIENT_ID;
+      try {
+        env.GOOGLE.CLIENT_SECRET = '';
+        env.GOOGLE.CLIENT_ID = '';
 
-      const res = await app.inject({
-        method: 'GET',
-        url: '/api/v1/auth/google'
-      });
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/v1/auth/google'
+        });
 
-      expect(res.statusCode).toBe(501);
-      const json = res.json();
-      expect(json.error.code).toBe('PROVIDER_NOT_CONFIGURED');
+        expect(res.statusCode).toBe(501);
+        const json = res.json();
+        expect(json.error.code).toBe('PROVIDER_NOT_CONFIGURED');
+      } finally {
+        env.GOOGLE.CLIENT_SECRET = origSecret;
+        env.GOOGLE.CLIENT_ID = origId;
+      }
+    });
 
-      env.GOOGLE.CLIENT_SECRET = origSecret;
+    it('should return 501 when Google OAuth credentials contain invalid placeholders', async () => {
+      const origSecret = env.GOOGLE.CLIENT_SECRET;
+      const origId = env.GOOGLE.CLIENT_ID;
+      try {
+        env.GOOGLE.CLIENT_ID = 'your_google_client_id';
+        env.GOOGLE.CLIENT_SECRET = 'your_google_client_secret_here';
+
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/v1/auth/google'
+        });
+
+        expect(res.statusCode).toBe(501);
+        const json = res.json();
+        expect(json.error.code).toBe('PROVIDER_NOT_CONFIGURED');
+      } finally {
+        env.GOOGLE.CLIENT_SECRET = origSecret;
+        env.GOOGLE.CLIENT_ID = origId;
+      }
     });
 
     it('should generate valid Google auth URL and state cookie when configured', async () => {
       const origSecret = env.GOOGLE.CLIENT_SECRET;
-      env.GOOGLE.CLIENT_SECRET = 'test_google_client_secret';
+      const origId = env.GOOGLE.CLIENT_ID;
+      try {
+        env.GOOGLE.CLIENT_ID = clientId;
+        env.GOOGLE.CLIENT_SECRET = 'test_google_client_secret';
 
-      const res = await app.inject({
-        method: 'GET',
-        url: '/api/v1/auth/google',
-        headers: { Accept: 'application/json' }
-      });
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/v1/auth/google',
+          headers: { Accept: 'application/json' }
+        });
 
-      expect(res.statusCode).toBe(200);
-      const json = res.json();
-      expect(json.success).toBe(true);
-      expect(json.data.authUrl).toContain('accounts.google.com/o/oauth2/v2/auth');
-      expect(json.data.authUrl).toContain(`client_id=${encodeURIComponent(clientId)}`);
-      expect(json.data.state).toBeDefined();
+        expect(res.statusCode).toBe(200);
+        const json = res.json();
+        expect(json.success).toBe(true);
+        expect(json.data.authUrl).toContain('accounts.google.com/o/oauth2/v2/auth');
+        expect(json.data.authUrl).toContain(`client_id=${encodeURIComponent(clientId)}`);
+        expect(json.data.state).toBeDefined();
 
-      // Check CSRF state cookie
-      const cookie = res.cookies.find((c) => c.name === 'oauth_state');
-      expect(cookie).toBeDefined();
-      expect(cookie.httpOnly).toBe(true);
-
-      env.GOOGLE.CLIENT_SECRET = origSecret;
+        // Check CSRF state cookie
+        const cookie = res.cookies.find((c) => c.name === 'oauth_state');
+        expect(cookie).toBeDefined();
+        expect(cookie.httpOnly).toBe(true);
+      } finally {
+        env.GOOGLE.CLIENT_SECRET = origSecret;
+        env.GOOGLE.CLIENT_ID = origId;
+      }
     });
   });
 
@@ -317,121 +348,129 @@ describe('Google OAuth 2.0 Integration & Security Tests', () => {
   describe('5. Full Callback API Endpoints (POST & GET)', () => {
     it('POST /api/v1/auth/google/callback should exchange code and return user + tokens', async () => {
       const origSecret = env.GOOGLE.CLIENT_SECRET;
-      env.GOOGLE.CLIENT_SECRET = 'test_secret';
+      try {
+        env.GOOGLE.CLIENT_SECRET = 'test_secret';
 
-      GoogleOAuthService.setMockJwks(() => [testJwk]);
+        GoogleOAuthService.setMockJwks(() => [testJwk]);
 
-      const testEmail = `api.google.post.${Date.now()}@example.com`;
-      const testSub = `sub-api-${Date.now()}`;
-      const idToken = createSignedIdToken({
-        email: testEmail,
-        sub: testSub,
-        name: 'API Google User'
-      });
+        const testEmail = `api.google.post.${Date.now()}@example.com`;
+        const testSub = `sub-api-${Date.now()}`;
+        const idToken = createSignedIdToken({
+          email: testEmail,
+          sub: testSub,
+          name: 'API Google User'
+        });
 
-      GoogleOAuthService.setMockExchange(() => ({
-        access_token: 'mock_google_access_token',
-        id_token: idToken,
-        token_type: 'Bearer',
-        expires_in: 3600
-      }));
+        GoogleOAuthService.setMockExchange(() => ({
+          access_token: 'mock_google_access_token',
+          id_token: idToken,
+          token_type: 'Bearer',
+          expires_in: 3600
+        }));
 
-      const { state } = GoogleOAuthService.generateState();
+        const { state } = GoogleOAuthService.generateState();
 
-      const res = await app.inject({
-        method: 'POST',
-        url: '/api/v1/auth/google/callback',
-        payload: {
-          code: 'valid_test_authorization_code',
-          state
-        }
-      });
+        const res = await app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/google/callback',
+          payload: {
+            code: 'valid_test_authorization_code',
+            state
+          }
+        });
 
-      expect(res.statusCode).toBe(200);
-      const body = res.json();
-      expect(body.success).toBe(true);
-      expect(body.data.user.email).toBe(testEmail);
-      expect(body.data.user.authProvider).toBe('google');
-      expect(body.data.accessToken).toBeDefined();
-      expect(body.data.refreshToken).toBeDefined();
+        expect(res.statusCode).toBe(200);
+        const body = res.json();
+        expect(body.success).toBe(true);
+        expect(body.data.user.email).toBe(testEmail);
+        expect(body.data.user.authProvider).toBe('google');
+        expect(body.data.accessToken).toBeDefined();
+        expect(body.data.refreshToken).toBeDefined();
 
-      // Refresh cookie must be set
-      const cookie = res.cookies.find((c) => c.name === 'refreshToken');
-      expect(cookie).toBeDefined();
-      expect(cookie.httpOnly).toBe(true);
-
-      env.GOOGLE.CLIENT_SECRET = origSecret;
+        // Refresh cookie must be set
+        const cookie = res.cookies.find((c) => c.name === 'refreshToken');
+        expect(cookie).toBeDefined();
+        expect(cookie.httpOnly).toBe(true);
+      } finally {
+        env.GOOGLE.CLIENT_SECRET = origSecret;
+      }
     });
 
     it('POST /api/v1/auth/google/callback should reject invalid authorization state', async () => {
       const origSecret = env.GOOGLE.CLIENT_SECRET;
-      env.GOOGLE.CLIENT_SECRET = 'test_secret';
+      try {
+        env.GOOGLE.CLIENT_SECRET = 'test_secret';
 
-      const res = await app.inject({
-        method: 'POST',
-        url: '/api/v1/auth/google/callback',
-        payload: {
-          code: 'any_code',
-          state: 'tampered_state.invalid_signature'
-        }
-      });
+        const res = await app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/google/callback',
+          payload: {
+            code: 'any_code',
+            state: 'tampered_state.invalid_signature'
+          }
+        });
 
-      expect(res.statusCode).toBe(400);
-      const body = res.json();
-      expect(body.success).toBe(false);
-      expect(body.error.code).toBe('INVALID_OAUTH_STATE');
-
-      env.GOOGLE.CLIENT_SECRET = origSecret;
+        expect(res.statusCode).toBe(400);
+        const body = res.json();
+        expect(body.success).toBe(false);
+        expect(body.error.code).toBe('INVALID_OAUTH_STATE');
+      } finally {
+        env.GOOGLE.CLIENT_SECRET = origSecret;
+      }
     });
 
     it('GET /api/v1/auth/google/callback should handle denied consent and redirect with error', async () => {
       const origSecret = env.GOOGLE.CLIENT_SECRET;
-      env.GOOGLE.CLIENT_SECRET = 'test_secret';
+      try {
+        env.GOOGLE.CLIENT_SECRET = 'test_secret';
 
-      const res = await app.inject({
-        method: 'GET',
-        url: '/api/v1/auth/google/callback?error=access_denied&error_description=User+denied+consent'
-      });
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/v1/auth/google/callback?error=access_denied&error_description=User+denied+consent'
+        });
 
-      expect(res.statusCode).toBe(302);
-      const redirectLocation = res.headers.location;
-      expect(redirectLocation).toContain('/auth/google/callback');
-      expect(redirectLocation).toContain('error=access_denied');
-
-      env.GOOGLE.CLIENT_SECRET = origSecret;
+        expect(res.statusCode).toBe(302);
+        const redirectLocation = res.headers.location;
+        expect(redirectLocation).toContain('/auth/google/callback');
+        expect(redirectLocation).toContain('error=access_denied');
+      } finally {
+        env.GOOGLE.CLIENT_SECRET = origSecret;
+      }
     });
 
     it('GET /api/v1/auth/google/callback should complete flow and redirect with tokens', async () => {
       const origSecret = env.GOOGLE.CLIENT_SECRET;
-      env.GOOGLE.CLIENT_SECRET = 'test_secret';
+      try {
+        env.GOOGLE.CLIENT_SECRET = 'test_secret';
 
-      GoogleOAuthService.setMockJwks(() => [testJwk]);
+        GoogleOAuthService.setMockJwks(() => [testJwk]);
 
-      const testEmail = `get.callback.${Date.now()}@example.com`;
-      const idToken = createSignedIdToken({ email: testEmail });
+        const testEmail = `get.callback.${Date.now()}@example.com`;
+        const idToken = createSignedIdToken({ email: testEmail });
 
-      GoogleOAuthService.setMockExchange(() => ({
-        access_token: 'mock_google_access_token',
-        id_token: idToken,
-        token_type: 'Bearer',
-        expires_in: 3600
-      }));
+        GoogleOAuthService.setMockExchange(() => ({
+          access_token: 'mock_google_access_token',
+          id_token: idToken,
+          token_type: 'Bearer',
+          expires_in: 3600
+        }));
 
-      const { state } = GoogleOAuthService.generateState();
+        const { state } = GoogleOAuthService.generateState();
 
-      const res = await app.inject({
-        method: 'GET',
-        url: `/api/v1/auth/google/callback?code=test_code_123&state=${encodeURIComponent(state)}`,
-        cookies: { oauth_state: state }
-      });
+        const res = await app.inject({
+          method: 'GET',
+          url: `/api/v1/auth/google/callback?code=test_code_123&state=${encodeURIComponent(state)}`,
+          cookies: { oauth_state: state }
+        });
 
-      expect(res.statusCode).toBe(302);
-      const redirectLocation = res.headers.location;
-      expect(redirectLocation).toContain('/auth/google/callback');
-      expect(redirectLocation).toContain('token=');
-      expect(redirectLocation).toContain('refreshToken=');
-
-      env.GOOGLE.CLIENT_SECRET = origSecret;
+        expect(res.statusCode).toBe(302);
+        const redirectLocation = res.headers.location;
+        expect(redirectLocation).toContain('/auth/google/callback');
+        expect(redirectLocation).toContain('token=');
+        expect(redirectLocation).toContain('refreshToken=');
+      } finally {
+        env.GOOGLE.CLIENT_SECRET = origSecret;
+      }
     });
   });
 });

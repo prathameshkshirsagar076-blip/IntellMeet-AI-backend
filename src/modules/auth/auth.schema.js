@@ -170,6 +170,39 @@ export const googleAuthSchema = {
   tags: ['Auth / OAuth']
 };
 
+export const googleCallbackSchema = {
+  description: 'Exchange Google authorization code for session tokens',
+  summary: 'Google OAuth Callback',
+  tags: ['Auth / OAuth'],
+  body: {
+    type: 'object',
+    required: ['code'],
+    properties: {
+      code: { type: 'string', example: '4/0AY0e-g7...' },
+      state: { type: 'string', example: 'payload.signature' },
+      redirect_uri: { type: 'string', example: 'http://localhost:5173/auth/google/callback' }
+    }
+  },
+  response: {
+    200: {
+      description: 'Google authentication successful',
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        message: { type: 'string', example: 'Google authentication successful' },
+        data: {
+          type: 'object',
+          properties: {
+            user: { type: 'object', additionalProperties: true },
+            accessToken: { type: 'string' },
+            refreshToken: { type: 'string' }
+          }
+        }
+      }
+    }
+  }
+};
+
 export const microsoftAuthSchema = {
   description: 'Start Microsoft Azure AD / 365 OAuth authentication flow',
   summary: 'Microsoft OAuth Login',

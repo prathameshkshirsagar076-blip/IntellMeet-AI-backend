@@ -34,6 +34,11 @@ const userSchema = new mongoose.Schema(
     },
     providerId: {
       type: String,
+      default: null,
+      index: true
+    },
+    avatar: {
+      type: String,
       default: null
     },
     organizationId: {

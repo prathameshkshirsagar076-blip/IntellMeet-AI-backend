@@ -194,9 +194,29 @@ export class AuthController {
         'PROVIDER_NOT_CONFIGURED'
       );
     }
-    // If configured, redirect to Google OAuth URL
-    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(env.GOOGLE.CLIENT_ID)}&redirect_uri=${encodeURIComponent(env.GOOGLE.CALLBACK_URL)}&response_type=code&scope=openid%20profile%20email`;
-    return reply.redirect(googleAuthUrl);
+
+    const redirectUri = request.query?.redirect_uri || env.GOOGLE.CALLBACK_URL;
+    const flow = request.query?.flow || 'login';
+    const { authUrl, state } = AuthService.getGoogleAuthUrl({ redirectUri, flow });
+
+    // Store signed state in secure HttpOnly cookie for CSRF protection
+    reply.setCookie('oauth_state', state, {
+      path: '/',
+      httpOnly: true,
+      secure: env.COOKIE_SECURE,
+      sameSite: 'lax',
+      maxAge: 600
+    });
+
+    const accept = request.headers['accept'] || '';
+    if (request.query?.format === 'json' || accept.includes('application/json')) {
+      return ApiResponse.success(reply, 200, 'Google authorization URL generated', {
+        authUrl,
+        state
+      });
+    }
+
+    return reply.redirect(authUrl);
   }
 
   static async googleCallback(request, reply) {
@@ -208,7 +228,93 @@ export class AuthController {
         'PROVIDER_NOT_CONFIGURED'
       );
     }
-    return ApiResponse.error(reply, 400, 'Google OAuth callback handling requires valid Google client secret.', 'OAUTH_ERROR');
+
+    const deviceName = request.headers['user-agent'] || 'Web Browser';
+    const ipAddress = request.ip;
+    const userAgent = request.headers['user-agent'];
+    const cookieState = request.cookies?.oauth_state;
+    const isPost = request.method === 'POST';
+
+    // In GET (Google redirects directly to backend)
+    if (!isPost) {
+      const frontendUrl = (env.FRONTEND_URL || 'http://localhost:5173').split(',')[0].trim();
+      const { code, state, error, error_description } = request.query || {};
+
+      if (error) {
+        reply.clearCookie('oauth_state', { path: '/' });
+        const redirectTarget = `${frontendUrl}/auth/google/callback?error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(error_description || 'Authentication was denied by Google.')}`;
+        return reply.redirect(redirectTarget);
+      }
+
+      if (!code || !state) {
+        reply.clearCookie('oauth_state', { path: '/' });
+        const redirectTarget = `${frontendUrl}/auth/google/callback?error=MISSING_PARAMETERS&error_description=${encodeURIComponent('Missing authorization code or state parameter.')}`;
+        return reply.redirect(redirectTarget);
+      }
+
+      try {
+        const { user, accessToken, refreshToken } = await AuthService.handleGoogleCallback({
+          code,
+          state,
+          redirectUri: env.GOOGLE.CALLBACK_URL,
+          cookieState,
+          deviceName,
+          ipAddress,
+          userAgent
+        });
+
+        setRefreshTokenCookie(reply, refreshToken, true);
+        reply.clearCookie('oauth_state', { path: '/' });
+
+        const redirectTarget = `${frontendUrl}/auth/google/callback?token=${encodeURIComponent(accessToken)}&refreshToken=${encodeURIComponent(refreshToken)}`;
+        return reply.redirect(redirectTarget);
+      } catch (err) {
+        reply.clearCookie('oauth_state', { path: '/' });
+        const errCode = err.code || 'OAUTH_ERROR';
+        const errMsg = err.message || 'Google authentication failed';
+        const redirectTarget = `${frontendUrl}/auth/google/callback?error=${encodeURIComponent(errCode)}&error_description=${encodeURIComponent(errMsg)}`;
+        return reply.redirect(redirectTarget);
+      }
+    }
+
+    // In POST (SPA sends code & state to backend API)
+    const { code, state, redirect_uri } = request.body || {};
+
+    if (!code) {
+      return ApiResponse.error(reply, 400, 'Authorization code is required', 'MISSING_AUTHORIZATION_CODE');
+    }
+
+    try {
+      const { user, accessToken, refreshToken } = await AuthService.handleGoogleCallback({
+        code,
+        state,
+        redirectUri: redirect_uri || env.GOOGLE.CALLBACK_URL,
+        cookieState,
+        deviceName,
+        ipAddress,
+        userAgent
+      });
+
+      setRefreshTokenCookie(reply, refreshToken, true);
+      reply.clearCookie('oauth_state', { path: '/' });
+
+      return ApiResponse.success(reply, 200, 'Google authentication successful', {
+        user,
+        accessToken,
+        refreshToken
+      });
+    } catch (err) {
+      reply.clearCookie('oauth_state', { path: '/' });
+      if (err.message === 'ACCOUNT_DISABLED') {
+        return ApiResponse.error(reply, 403, 'Account is disabled. Please contact administrator.', 'ACCOUNT_DISABLED');
+      }
+      return ApiResponse.error(
+        reply,
+        400,
+        err.message || 'Google authentication failed',
+        err.code || 'OAUTH_ERROR'
+      );
+    }
   }
 
   static async microsoftAuth(request, reply) {

@@ -84,7 +84,7 @@ describe('Meeting REST API Integration Tests', () => {
       const payload = {
         title: 'New Executive Sync',
         description: 'Product roadmap review',
-        date: '2026-10-15',
+        date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         startTime: '14:00',
         durationMinutes: 45,
         participantEmails: ['meeting.attendee@example.com'],

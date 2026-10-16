@@ -11,7 +11,7 @@ export class UserService {
   }
 
   static async updateUserProfile(userId, updateData) {
-    const allowedFields = ['name'];
+    const allowedFields = ['name', 'avatar'];
     const filteredUpdate = {};
 
     for (const field of allowedFields) {

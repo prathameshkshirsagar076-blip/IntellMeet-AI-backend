@@ -7,6 +7,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   googleAuthSchema,
+  googleCallbackSchema,
   microsoftAuthSchema,
   samlLoginSchema
 } from './auth.schema.js';
@@ -77,6 +78,7 @@ export async function authRoutes(fastify, opts) {
   // OAuth and SAML Endpoints
   fastify.get('/auth/google', { schema: googleAuthSchema }, AuthController.googleAuth);
   fastify.get('/auth/google/callback', { schema: googleAuthSchema }, AuthController.googleCallback);
+  fastify.post('/auth/google/callback', { schema: googleCallbackSchema }, AuthController.googleCallback);
 
   fastify.get('/auth/microsoft', { schema: microsoftAuthSchema }, AuthController.microsoftAuth);
   fastify.get('/auth/microsoft/callback', { schema: microsoftAuthSchema }, AuthController.microsoftCallback);

@@ -34,7 +34,7 @@ export const env = {
   COOKIE_SECURE: process.env.COOKIE_SECURE === 'true',
 
   GOOGLE: {
-    CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+    CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '545957805612-mdlnkg7m528bsac197rm2lh09dhb0fuo.apps.googleusercontent.com',
     CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
     CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/v1/auth/google/callback'
   },

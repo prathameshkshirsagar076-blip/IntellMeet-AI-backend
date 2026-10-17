@@ -28,6 +28,7 @@
     "@fastify/rate-limit": "^11.2.1",
     "@fastify/swagger": "^9.9.1",
     "@fastify/swagger-ui": "^6.1.1",
+    "@google/generative-ai": "^0.24.1",
     "@sinclair/typebox": "^0.34.52",
     "bcryptjs": "^3.0.3",
     "dotenv": "^18.0.6",
@@ -35,6 +36,7 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.11.1",
     "nodemailer": "^10.0.16",
+    "openai": "^7.36.0",
     "socket.io": "^4.8.4"
   },
   "devDependencies": {

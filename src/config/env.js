@@ -129,6 +129,44 @@ export const env = {
     TURN_SECRET: process.env.TURN_SECRET || '',
     TURN_TTL_SECONDS: parseInt(process.env.TURN_TTL_SECONDS || '86400', 10),
     MAX_PARTICIPANTS: parseInt(process.env.MAX_MEETING_PARTICIPANTS || '50', 10)
+  },
+
+  AI_PROVIDER: process.env.AI_PROVIDER || (process.env.GEMINI_API_KEY ? 'gemini' : 'openai'),
+
+  GEMINI: {
+    get API_KEY() {
+      return (process.env.GEMINI_API_KEY || '').trim();
+    },
+    set API_KEY(val) {
+      process.env.GEMINI_API_KEY = val != null ? String(val) : '';
+    },
+    get MODEL() {
+      return (process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim();
+    },
+    set MODEL(val) {
+      process.env.GEMINI_MODEL = val != null ? String(val) : '';
+    }
+  },
+
+  OPENAI: {
+    get API_KEY() {
+      return (process.env.OPENAI_API_KEY || '').trim();
+    },
+    set API_KEY(val) {
+      process.env.OPENAI_API_KEY = val != null ? String(val) : '';
+    },
+    get MODEL() {
+      return (process.env.OPENAI_MODEL || 'gpt-4o').trim();
+    },
+    set MODEL(val) {
+      process.env.OPENAI_MODEL = val != null ? String(val) : '';
+    },
+    get BASE_URL() {
+      return (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').trim();
+    },
+    set BASE_URL(val) {
+      process.env.OPENAI_BASE_URL = val != null ? String(val) : '';
+    }
   }
 };
 

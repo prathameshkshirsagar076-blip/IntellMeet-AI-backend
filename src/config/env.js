@@ -47,7 +47,7 @@ export const env = {
       process.env.GOOGLE_CLIENT_SECRET = val != null ? String(val) : '';
     },
     get CALLBACK_URL() {
-      return (process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/v1/auth/google/callback').trim();
+      return (process.env.GOOGLE_CALLBACK_URL || 'https://playtime-croak-kiln.ngrok-free.dev/api/v1/auth/google/callback').trim();
     },
     set CALLBACK_URL(val) {
       process.env.GOOGLE_CALLBACK_URL = val != null ? String(val) : '';

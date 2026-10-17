@@ -10,7 +10,7 @@ describe('Google OAuth 2.0 Integration & Security Tests', () => {
   let rsaKeyPair;
   let testJwk;
   const testKid = 'test-key-id-1';
-  const clientId = '545957805612-mdlnkg7m528bsac197rm2lh09dhb0fuo.apps.googleusercontent.com';
+  const clientId = env.GOOGLE.CLIENT_ID || '545957805612-mdlnkg7m528bsac197rm2lh09dhb0fuo.apps.googleusercontent.com';
 
   beforeAll(async () => {
     // Generate RSA key pair for testing ID token signatures

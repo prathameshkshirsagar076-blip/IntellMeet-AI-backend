@@ -13,6 +13,7 @@ import { userRoutes } from './modules/users/user.routes.js';
 import { contactSalesRoutes } from './modules/contact-sales/contact-sales.routes.js';
 import { chatRoutes } from './modules/chat/chat.routes.js';
 import { meetingRoutes } from './modules/meetings/meeting.routes.js';
+import { aiRoutes } from './modules/ai/ai.routes.js';
 
 import { initChatSocket, closeChatSocket } from './modules/chat/socket/socket.server.js';
 import { errorHandler } from './middleware/error-handler.js';
@@ -60,6 +61,7 @@ export async function buildApp(opts = {}) {
       await api.register(contactSalesRoutes);
       await api.register(chatRoutes);
       await api.register(meetingRoutes);
+      await api.register(aiRoutes);
     },
     { prefix: '/api/v1' }
   );
